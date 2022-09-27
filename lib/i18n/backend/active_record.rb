@@ -55,7 +55,9 @@ module I18n
 
         def reload!
           @translations = nil
+          return self if self.class.config.cache_source == :memory
 
+          self.class.config.cache_source.delete_matched('i18n')
           self
         end
 
@@ -82,9 +84,19 @@ module I18n
           if self.class.config.cache_translations
             keys = ([locale] + key.split(I18n::Backend::Flatten::FLATTEN_SEPARATOR)).map(&:to_sym)
 
-            return translations.dig(*keys)
+            return translations.dig(*keys) if self.class.config.cache_source == :memory
           end
 
+          fetched_result = find_translation(locale, key)
+
+          return fetched_result unless self.class.config.cache_translations
+
+          cache_key = "i18n.#{locale}.#{key}"
+
+          return self.class.config.cache_source.fetch(cache_key) { fetched_result }
+        end
+
+        def find_translation(locale, key)
           result = if key == ''
             Translation.locale(locale).all
           else
