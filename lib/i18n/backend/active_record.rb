@@ -55,9 +55,10 @@ module I18n
 
         def reload!
           @translations = nil
+          return self unless self.class.config.cache_source
           return self if self.class.config.cache_source == :memory
 
-          self.class.config.cache_source.delete_matched('i18n')
+          self.class.config.cache_source.delete_matched('i18n*')
           self
         end
 
