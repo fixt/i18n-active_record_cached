@@ -109,6 +109,10 @@ module I18n
           end
         end
 
+        def cache_key
+          "i18n.#{locale}.#{key}"
+        end
+
         def value=(value)
           case value
           when false
@@ -121,7 +125,13 @@ module I18n
         end
 
         def invalidate_translations_cache
-          I18n.backend.reload! if I18n::Backend::ActiveRecord.config.cache_translations
+          I18n.backend.reload_key!(cache_key) if I18n::Backend::ActiveRecord.config.cache_translations
+
+          I18n::Backend::ActiveRecord.config.cache_source.write(cache_key, value) if using_redis_cache?
+        end
+
+        def using_redis_cache?
+          I18n::Backend::ActiveRecord.config.cache_translations && I18n::Backend::ActiveRecord.config.cache_source != :memory
         end
       end
     end

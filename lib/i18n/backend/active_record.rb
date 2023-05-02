@@ -53,6 +53,13 @@ module I18n
           reload! if self.class.config.cache_translations
         end
 
+        def reload_key!(key, value)
+          log("Reloading #{key} in cache. Setting to #{value}")
+          return reload! if self.class.config.cache_source == :memory
+
+          self.class.config.cache_source.write(key, value)
+        end
+
         def reload!
           log('Reloading translations')
           @translations = nil

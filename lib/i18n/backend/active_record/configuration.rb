@@ -17,10 +17,20 @@ module I18n
             return unless args.first.is_a?(MissingTranslation)
             locale = args.second
             key = args.third
+            default = args.last[:default]
 
-            @logger.error("Translation for (#{key}, #{locale}) not found in ActiveRecord or YML locales")
+            if default.nil?
+              @logger.error("Translation for (#{key}, #{locale}) not found in ActiveRecord or YML locales. No default provided")
+              return "translation missing: #{locale} #{key}"
+            end
 
-            return nil
+            return default unless default.is_a? String
+
+            @logger.error("Translation for (#{key}, #{locale}) not found in ActiveRecord or YML locales. Using default value: #{default}")
+
+            ActiveRecord::Translation.create(locale: locale, key: key, value: default)
+
+            return default
           end
         end
       end
