@@ -54,11 +54,13 @@ module I18n
         end
 
         def reload!
+          log('Reloading translations')
           @translations = nil
           return self unless self.class.config.cache_source
           return self if self.class.config.cache_source == :memory
 
           self.class.config.cache_source.delete_matched('i18n*')
+          log('Cleared cache')
           self
         end
 
@@ -88,13 +90,19 @@ module I18n
             return translations.dig(*keys) if self.class.config.cache_source == :memory
           end
 
-          fetched_result = find_translation(locale, key)
+          result = if self.class.config.cache_translations
+            cache_key = "i18n.#{locale}.#{key}"
+            self.class.config.cache_source.fetch(cache_key) do
+              log("Translation for (#{key}, #{locale}) not found in Cache")
+              find_translation(locale, key)
+            end
+          else
+            find_translation(locale, key)
+          end
 
-          return fetched_result unless self.class.config.cache_translations
+          return result unless result.nil?
 
-          cache_key = "i18n.#{locale}.#{key}"
-
-          return self.class.config.cache_source.fetch(cache_key) { fetched_result }
+          create_record_from_simple_backend_if_possible_otherwise_nil(locale, key)
         end
 
         def find_translation(locale, key)
@@ -138,6 +146,20 @@ module I18n
           key.to_s.split(FLATTEN_SEPARATOR).inject([]) do |keys, k|
             keys << [keys.last, k].compact.join(FLATTEN_SEPARATOR)
           end
+        end
+
+        def create_record_from_simple_backend_if_possible_otherwise_nil(locale, key)
+          simpleValue = I18n::Backend::Simple.new.translate(locale, key, { raise: false, throw: false })
+
+          ActiveRecord::Translation.create(locale: locale.to_s, key: key, value: simpleValue)
+
+          simpleValue
+        end
+
+        def log(message, type = :info)
+          return if self.class.config.logger.nil?
+
+          self.class.config.logger.send(type, message)
         end
       end
 
