@@ -4,7 +4,8 @@ module I18n
   module Backend
     class ActiveRecord
       class Configuration
-        attr_accessor :cleanup_with_destroy, :cache_translations, :cache_source, :logger, :simple_backend
+        attr_accessor :cleanup_with_destroy, :cache_translations, :cache_source, :logger, :simple_backend,
+                      :exception_handler
 
         def initialize
           @cleanup_with_destroy = false
@@ -12,33 +13,9 @@ module I18n
           @cache_source = :memory
           @logger = nil ## should respond to :info, :error
           @simple_backend = I18n::Backend::Simple.new
+          @exception_handler = nil
 
-          I18n.exception_handler = lambda do |*args|
-            return unless args.first.is_a?(MissingTranslation)
-
-            locale = args.second
-            key = args.third
-            default = args.last[:default]
-
-            if default.nil?
-              @logger.error("Translation for (#{key}, #{locale}) not found in ActiveRecord or YML locales. No default provided")
-              return "translation missing: #{locale} #{key}"
-            end
-
-            if default.is_a? Array
-              best_option = default.first.to_s
-
-              return best_option.tr('.',' ').capitalize if best_option.present?
-            end
-
-            return default unless default.is_a? String
-
-            @logger.error("Translation for (#{key}, #{locale}) not found in ActiveRecord or YML locales. Using default value: #{default}")
-
-            ActiveRecord::Translation.create(locale: locale, key: key, value: default)
-
-            return default
-          end
+          I18n.exception_handler = @exception_handler unless @exception_handler.nil?
         end
       end
     end
