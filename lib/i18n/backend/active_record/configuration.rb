@@ -15,6 +15,7 @@ module I18n
 
           I18n.exception_handler = lambda do |*args|
             return unless args.first.is_a?(MissingTranslation)
+
             locale = args.second
             key = args.third
             default = args.last[:default]
@@ -22,6 +23,12 @@ module I18n
             if default.nil?
               @logger.error("Translation for (#{key}, #{locale}) not found in ActiveRecord or YML locales. No default provided")
               return "translation missing: #{locale} #{key}"
+            end
+
+            if default.is_a? Array
+              best_option = default.first.to_s
+
+              return best_option.tr('.',' ').capitalize if best_option.present?
             end
 
             return default unless default.is_a? String
