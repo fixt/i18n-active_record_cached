@@ -19,6 +19,13 @@ module I18n
         def config
           @config ||= Configuration.new
         end
+
+        def reload_key!(key, value)
+          log("Reloading #{key} in cache. Setting to #{value}")
+          return reload! if config.cache_source == :memory
+
+          config.cache_source.write(key, value)
+        end
       end
 
       def initialize
