@@ -125,7 +125,7 @@ module I18n
         end
 
         def invalidate_translations_cache
-          I18n.backend.reload_key!(cache_key, value) if I18n::Backend::ActiveRecord.config.cache_translations
+          I18n::Backend::ActiveRecord.reload_key!(cache_key, value) if I18n::Backend::ActiveRecord.config.cache_translations
 
           I18n::Backend::ActiveRecord.config.cache_source.write(cache_key, value) if using_redis_cache?
         end
