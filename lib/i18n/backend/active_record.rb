@@ -35,9 +35,11 @@ module I18n
           []
         end
 
+
+
         def store_translations(locale, data, options = {})
           escape = options.fetch(:escape, true)
-
+          cache_values = {}
           flatten_translations(locale, data, escape, false).each do |key, value|
             translation = Translation.locale(locale).lookup(expand_keys(key))
 
@@ -47,10 +49,16 @@ module I18n
               translation.delete_all
             end
 
-            Translation.create(locale: locale.to_s, key: key.to_s, value: value)
+            translation = Translation.find_or_create_by(locale: locale.to_s, key: key.to_s, value: value)
+
+            cache_values[translation.cache_key] = value if translation.using_redis_cache?
           end
 
-          reload! if self.class.config.cache_translations
+          if self.class.config.cache_translations
+            (reload! && return) if self.class.config.cache_source == :memory
+
+            cache_values.each { |key, value| reload_key!(key, value) }
+          end
         end
 
         def reload_key!(key, value)
