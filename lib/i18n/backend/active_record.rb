@@ -26,6 +26,12 @@ module I18n
 
           config.cache_source.write(key, value)
         end
+
+        def log(message, type = :info)
+          return if config.logger.nil?
+
+          config.logger.send(type, message)
+        end
       end
 
       def initialize
